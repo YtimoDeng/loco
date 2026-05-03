@@ -294,7 +294,12 @@ mod tests {
             headers: None,
         };
         assert!(sender.mail(&data).await.is_ok());
-        assert_eq!(stub.messages().len(), 1);
+        with_settings!({filters => vec![
+            (r"[0-9A-Za-z]+{40}", "IDENTIFIER"),
+            (r"\w+, \d{1,2} \w+ \d{4} \d{2}:\d{2}:\d{2} [+-]\d{4}", "DATE")
+        ]}, {
+            assert_debug_snapshot!(stub.messages());
+        });
     }
 
     #[tokio::test]
@@ -318,7 +323,12 @@ mod tests {
             headers: None,
         };
         assert!(sender.mail(&data).await.is_ok());
-        assert_eq!(stub.messages().len(), 1);
+        with_settings!({filters => vec![
+            (r"[0-9A-Za-z]+{40}", "IDENTIFIER"),
+            (r"\w+, \d{1,2} \w+ \d{4} \d{2}:\d{2}:\d{2} [+-]\d{4}", "DATE")
+        ]}, {
+            assert_debug_snapshot!(stub.messages());
+        });
     }
 
     #[tokio::test]
@@ -345,7 +355,12 @@ mod tests {
             headers: None,
         };
         assert!(sender.mail(&data).await.is_ok());
-        assert_eq!(stub.messages().len(), 1);
+        with_settings!({filters => vec![
+            (r"[0-9A-Za-z]+{40}", "IDENTIFIER"),
+            (r"\w+, \d{1,2} \w+ \d{4} \d{2}:\d{2}:\d{2} [+-]\d{4}", "DATE")
+        ]}, {
+            assert_debug_snapshot!(stub.messages());
+        });
     }
 
     #[tokio::test]
@@ -372,6 +387,11 @@ mod tests {
             headers: None,
         };
         assert!(sender.mail(&data).await.is_ok());
-        assert_eq!(stub.messages().len(), 1);
+        with_settings!({filters => vec![
+            (r"[0-9A-Za-z]+{40}", "IDENTIFIER"),
+            (r"\w+, \d{1,2} \w+ \d{4} \d{2}:\d{2}:\d{2} [+-]\d{4}", "DATE")
+        ]}, {
+            assert_debug_snapshot!(stub.messages());
+        });
     }
 }
