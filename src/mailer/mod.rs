@@ -30,10 +30,13 @@ pub struct EmailHeaders {
 pub struct Args {
     pub from: Option<String>,
     pub to: String,
+    pub to_list: Option<Vec<String>>,
     pub reply_to: Option<String>,
     pub locals: serde_json::Value,
     pub bcc: Option<String>,
+    pub bcc_list: Option<Vec<String>>,
     pub cc: Option<String>,
+    pub cc_list: Option<Vec<String>>,
     pub headers: Option<EmailHeaders>,
 }
 
@@ -44,6 +47,9 @@ pub struct Email {
     pub from: Option<String>,
     /// Mailbox to `To` header
     pub to: String,
+    /// Mailbox to `To` header as a list
+    #[serde(default)]
+    pub to_list: Option<Vec<String>>,
     /// Mailbox to `ReplyTo` header
     pub reply_to: Option<String>,
     /// Subject header to message
@@ -54,8 +60,14 @@ pub struct Email {
     pub html: String,
     /// BCC header to message
     pub bcc: Option<String>,
+    /// BCC header to message as a list
+    #[serde(default)]
+    pub bcc_list: Option<Vec<String>>,
     /// CC header to message
     pub cc: Option<String>,
+    /// CC header to message as a list
+    #[serde(default)]
+    pub cc_list: Option<Vec<String>>,
     /// Custom headers for the email (e.g., References, In-Reply-To, Message-ID)
     pub headers: Option<EmailHeaders>,
 }
@@ -102,12 +114,15 @@ pub trait Mailer {
             &Email {
                 from: args.from.clone(),
                 to: args.to.clone(),
+                to_list: args.to_list.clone(),
                 reply_to: args.reply_to.clone(),
                 subject: content.subject,
                 text: content.text,
                 html: content.html,
                 bcc: args.bcc.clone(),
+                bcc_list: args.bcc_list.clone(),
                 cc: args.cc.clone(),
+                cc_list: args.cc_list.clone(),
                 headers: args.headers.clone(),
             },
         )

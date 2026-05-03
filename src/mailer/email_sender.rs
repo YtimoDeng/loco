@@ -102,22 +102,43 @@ impl EmailSender {
     /// message
     pub async fn mail(&self, email: &Email) -> Result<()> {
         let content = MultiPart::alternative_plain_html(email.text.clone(), email.html.clone());
-        let mut builder = Message::builder()
-            .from(
-                email
-                    .from
-                    .clone()
-                    .unwrap_or_else(|| DEFAULT_FROM_SENDER.to_string())
-                    .parse()?,
-            )
-            .to(email.to.parse()?);
+        let mut builder = Message::builder().from(
+            email
+                .from
+                .clone()
+                .unwrap_or_else(|| DEFAULT_FROM_SENDER.to_string())
+                .parse()?,
+        );
+
+        match email.to_list.as_deref() {
+            Some(list) if !list.is_empty() => {
+                for to in list {
+                    builder = builder.to(to.parse()?);
+                }
+            }
+            _ => {
+                builder = builder.to(email.to.parse()?);
+            }
+        }
 
         if let Some(bcc) = &email.bcc {
             builder = builder.bcc(bcc.parse()?);
         }
 
+        if let Some(bcc_list) = &email.bcc_list {
+            for bcc in bcc_list {
+                builder = builder.bcc(bcc.parse()?);
+            }
+        }
+
         if let Some(cc) = &email.cc {
             builder = builder.cc(cc.parse()?);
+        }
+
+        if let Some(cc_list) = &email.cc_list {
+            for cc in cc_list {
+                builder = builder.cc(cc.parse()?);
+            }
         }
 
         if let Some(reply_to) = &email.reply_to {
@@ -183,12 +204,15 @@ mod tests {
         let data = Email {
             from: Some("test@framework.com".to_string()),
             to: "user1@framework.com".to_string(),
+            to_list: None,
             reply_to: None,
             subject: "Email Subject".to_string(),
             text: "Welcome".to_string(),
             html: html.to_string(),
             bcc: None,
+            bcc_list: None,
             cc: None,
+            cc_list: None,
             headers: None,
         };
         assert!(sender.mail(&data).await.is_ok());
@@ -225,12 +249,15 @@ mod tests {
         let data = Email {
             from: Some("test@framework.com".to_string()),
             to: "user1@framework.com".to_string(),
+            to_list: None,
             reply_to: None,
             subject: "Email Subject with Headers".to_string(),
             text: "Welcome with headers".to_string(),
             html: html.to_string(),
             bcc: None,
+            bcc_list: None,
             cc: None,
+            cc_list: None,
             headers: Some(headers),
         };
         assert!(sender.mail(&data).await.is_ok());
@@ -241,5 +268,110 @@ mod tests {
         ]}, {
             assert_debug_snapshot!(stub.messages());
         });
+    }
+
+    #[tokio::test]
+    async fn can_send_email_with_multiple_to_recipients() {
+        let stub = StubTransport::new_ok();
+        let sender = EmailSender {
+            transport: EmailTransport::Test(stub.clone()),
+        };
+        let data = Email {
+            from: Some("test@framework.com".to_string()),
+            to: String::new(),
+            to_list: Some(vec![
+                "user1@framework.com".to_string(),
+                "user2@framework.com".to_string(),
+            ]),
+            reply_to: None,
+            subject: "Multi-To".to_string(),
+            text: "Hello".to_string(),
+            html: "<html><body>Hello</body></html>".to_string(),
+            bcc: None,
+            bcc_list: None,
+            cc: None,
+            cc_list: None,
+            headers: None,
+        };
+        assert!(sender.mail(&data).await.is_ok());
+        assert_eq!(stub.messages().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn fallback_to_single_to_when_to_list_is_empty() {
+        let stub = StubTransport::new_ok();
+        let sender = EmailSender {
+            transport: EmailTransport::Test(stub.clone()),
+        };
+        let data = Email {
+            from: Some("test@framework.com".to_string()),
+            to: "user1@framework.com".to_string(),
+            to_list: Some(vec![]),
+            reply_to: None,
+            subject: "Fallback".to_string(),
+            text: "Hello".to_string(),
+            html: "<html><body>Hello</body></html>".to_string(),
+            bcc: None,
+            bcc_list: None,
+            cc: None,
+            cc_list: None,
+            headers: None,
+        };
+        assert!(sender.mail(&data).await.is_ok());
+        assert_eq!(stub.messages().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn can_send_email_with_multiple_bcc_recipients() {
+        let stub = StubTransport::new_ok();
+        let sender = EmailSender {
+            transport: EmailTransport::Test(stub.clone()),
+        };
+        let data = Email {
+            from: Some("test@framework.com".to_string()),
+            to: "user1@framework.com".to_string(),
+            to_list: None,
+            reply_to: None,
+            subject: "Multi-BCC".to_string(),
+            text: "Hello".to_string(),
+            html: "<html><body>Hello</body></html>".to_string(),
+            bcc: None,
+            bcc_list: Some(vec![
+                "bcc1@framework.com".to_string(),
+                "bcc2@framework.com".to_string(),
+            ]),
+            cc: None,
+            cc_list: None,
+            headers: None,
+        };
+        assert!(sender.mail(&data).await.is_ok());
+        assert_eq!(stub.messages().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn can_send_email_with_multiple_cc_recipients() {
+        let stub = StubTransport::new_ok();
+        let sender = EmailSender {
+            transport: EmailTransport::Test(stub.clone()),
+        };
+        let data = Email {
+            from: Some("test@framework.com".to_string()),
+            to: "user1@framework.com".to_string(),
+            to_list: None,
+            reply_to: None,
+            subject: "Multi-CC".to_string(),
+            text: "Hello".to_string(),
+            html: "<html><body>Hello</body></html>".to_string(),
+            bcc: None,
+            bcc_list: None,
+            cc: None,
+            cc_list: Some(vec![
+                "cc1@framework.com".to_string(),
+                "cc2@framework.com".to_string(),
+            ]),
+            headers: None,
+        };
+        assert!(sender.mail(&data).await.is_ok());
+        assert_eq!(stub.messages().len(), 1);
     }
 }
